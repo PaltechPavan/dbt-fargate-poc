@@ -1,0 +1,9 @@
+name: dbt_fargate
+
+version: '1.0'
+
+profile: snowflake
+
+models:
+  dbt_fargate:
+    materialized: table
