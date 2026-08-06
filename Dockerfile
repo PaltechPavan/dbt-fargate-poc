@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN pip install dbt-snowflake
+RUN pip install --no-cache-dir -r requirements.txt
+
+ENV DBT_PROFILES_DIR=/app
 
 CMD ["dbt","run"]
