@@ -1,9 +1,14 @@
-name: dbt_fargate
+name: dbt_athena
 
 version: '1.0'
 
-profile: snowflake
+config-version: 2
+
+profile: athena
+
+model-paths:
+  - models
 
 models:
-  dbt_fargate:
-    materialized: table
+  dbt_athena:
+    +materialized: table
