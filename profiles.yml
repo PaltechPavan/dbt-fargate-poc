@@ -11,7 +11,7 @@ athena:
 
       schema: umed_raw_ehr_db
 
-      s3_staging_dir: s3://umed-athena-query-results/dbt/
+      s3_staging_dir: s3://umed-practice-12345-raw/practice/
 
       work_group: primary
 
