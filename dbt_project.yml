@@ -1,6 +1,6 @@
 name: dbt_athena
 
-version: '1.0'
+version: "1.0"
 
 config-version: 2
 
@@ -10,5 +10,7 @@ model-paths:
   - models
 
 models:
+
   dbt_athena:
+
     +materialized: table
