@@ -2,6 +2,12 @@
 
 set -e
 
+echo "===== Current Directory ====="
+pwd
+
+echo "===== Files in /app ====="
+find /app
+
 echo "===== dbt Version ====="
 dbt --version
 
@@ -13,5 +19,3 @@ dbt debug
 
 echo "===== Running dbt Models ====="
 dbt run
-
-echo "===== Completed ====="
