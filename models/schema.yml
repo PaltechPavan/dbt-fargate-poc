@@ -1,0 +1,17 @@
+version: 2
+
+models:
+
+  - name: example
+
+    description: Example dbt model
+
+    columns:
+
+      - name: id
+
+        tests:
+
+          - unique
+
+          - not_null
