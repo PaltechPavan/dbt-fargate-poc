@@ -1,1 +1,2 @@
-dbt-athena-community
+dbt-core==1.10.11
+dbt-athena-community==1.10.0
