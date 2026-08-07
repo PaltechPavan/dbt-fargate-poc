@@ -2,15 +2,16 @@
 
 set -e
 
-echo "Starting dbt container..."
-
-echo "Checking dbt installation..."
+echo "===== dbt Version ====="
 dbt --version
 
-echo "Running dbt debug..."
+echo "===== Git Version ====="
+git --version
+
+echo "===== Running dbt Debug ====="
 dbt debug
 
-echo "Running dbt models..."
+echo "===== Running dbt Models ====="
 dbt run
 
-echo "dbt execution completed."
+echo "===== Completed ====="
