@@ -10,7 +10,5 @@ model-paths:
   - models
 
 models:
-
-  dbt_athena:
-
+  dbt_demo:
     +materialized: table
