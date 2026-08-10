@@ -1,18 +1,19 @@
 #!/bin/sh
-
 set -e
 
-echo "===== Current Directory ====="
-pwd
+echo "===== Installed Python packages ====="
+pip freeze | grep dbt
 
-echo "===== Files in /app ====="
-find /app
+echo "===== dbt packages directory ====="
+find /app -name "dbt_packages" -type d
 
-echo "===== dbt Version ====="
-dbt --version
-
-echo "===== Git Version ====="
-git --version
+echo "===== dbt_athena directories ====="
+python -c "
+import site, glob
+for d in site.getsitepackages():
+    for p in glob.glob(d + '/**/dbt_athena', recursive=True):
+        print(p)
+"
 
 echo "===== Running dbt Debug ====="
 dbt debug
