@@ -1,4 +1,4 @@
-name: Build and Push to Amazon ECR
+name: Build, Push and Run dbt on ECS
 
 on:
   push:
@@ -10,35 +10,124 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-and-run:
 
     runs-on: ubuntu-latest
 
     steps:
 
+      # -----------------------------------------
+      # 1. Checkout Repository
+      # -----------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+
+      # -----------------------------------------
+      # 2. Configure AWS Credentials using OIDC
+      # -----------------------------------------
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+
+      # -----------------------------------------
+      # 3. Login to Amazon ECR
+      # -----------------------------------------
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+
+      # -----------------------------------------
+      # 4. Build Docker Image
+      # -----------------------------------------
       - name: Build Docker Image
         run: |
           docker build -t dbt-athena .
 
+
+      # -----------------------------------------
+      # 5. Tag Docker Image
+      # -----------------------------------------
       - name: Tag Docker Image
         run: |
           docker tag dbt-athena:latest \
-          ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
 
+
+      # -----------------------------------------
+      # 6. Push Docker Image to ECR
+      # -----------------------------------------
       - name: Push Docker Image
         run: |
           docker push \
-          ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
+
+
+      # -----------------------------------------
+      # 7. Run ECS Fargate Task
+      # -----------------------------------------
+      - name: Run ECS Fargate Task
+        id: run-task
+        run: |
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "${{ secrets.ECS_CLUSTER }}" \
+            --task-definition "${{ secrets.ECS_TASK_DEFINITION }}" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.ECS_SUBNET }}],securityGroups=[${{ secrets.ECS_SECURITY_GROUP }}],assignPublicIp=ENABLED}" \
+            --started-by "github-actions-${GITHUB_RUN_ID}" \
+            --query "tasks[0].taskArn" \
+            --output text)
+
+          echo "TASK_ARN=$TASK_ARN" >> "$GITHUB_ENV"
+
+          echo "ECS Task started:"
+          echo "$TASK_ARN"
+
+
+      # -----------------------------------------
+      # 8. Wait for dbt Task to Finish
+      # -----------------------------------------
+      - name: Wait for ECS Task to Stop
+        run: |
+
+          echo "Waiting for dbt ECS task to finish..."
+
+          aws ecs wait tasks-stopped \
+            --cluster "${{ secrets.ECS_CLUSTER }}" \
+            --tasks "$TASK_ARN"
+
+          echo "ECS task has stopped."
+
+
+      # -----------------------------------------
+      # 9. Check dbt Exit Code
+      # -----------------------------------------
+      - name: Check dbt Task Result
+        run: |
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster "${{ secrets.ECS_CLUSTER }}" \
+            --tasks "$TASK_ARN" \
+            --query "tasks[0].containers[0].exitCode" \
+            --output text)
+
+          echo "dbt container exit code: $EXIT_CODE"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+
+            echo "❌ dbt task failed."
+
+            aws ecs describe-tasks \
+              --cluster "${{ secrets.ECS_CLUSTER }}" \
+              --tasks "$TASK_ARN"
+
+            exit 1
+
+          fi
+
+          echo "✅ dbt task completed successfully."
